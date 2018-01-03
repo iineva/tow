@@ -56,7 +56,7 @@ func (s *Session) Start() {
 				break
 			}
 
-			buf := make([]byte, 1024*10) // max buffer 1k
+			buf := make([]byte, 1024*6+10) // max buffer 6k
 			l, err := s.webSocketConn.Read(buf)
 
 			if err != nil {
