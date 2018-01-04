@@ -55,7 +55,7 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	upgrade := strings.ToLower(r.Header.Get("Upgrade"))
 	protocol := r.Header.Get("Sec-WebSocket-Protocol")
 	//websockets upgrade AND has chisel prefix
-	if upgrade == "websocket" && protocol == chshare.ProtocolVersion {
+	if upgrade == "websocket" && protocol == towshare.ProtocolVersion {
 		s.handleWS(w, r)
 		return
 	}
