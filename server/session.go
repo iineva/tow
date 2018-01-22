@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/iineva/tow/share"
 	"github.com/jpillora/chisel/share"
@@ -18,6 +19,7 @@ type Session struct {
 	webSocketWriteMutex sync.Mutex
 	running             bool
 	Conns               map[uint16]*Conn
+	keepAlive           time.Duration
 }
 
 type SessionError struct {
@@ -37,8 +39,9 @@ func NewSession(id uint32, log *chshare.Logger, conn net.Conn) *Session {
 		Id:            id,
 		Logger:        log,
 		webSocketConn: conn,
-		running:       true,
+		running:       false,
 		Conns:         map[uint16]*Conn{},
+		keepAlive:     3 * time.Second,
 	}
 	session.Logger.Info = true
 	session.Logger.Debug = false
@@ -47,8 +50,21 @@ func NewSession(id uint32, log *chshare.Logger, conn net.Conn) *Session {
 
 func (s *Session) Start() {
 
+	s.running = true
+
+	// keep alive
+	go func() {
+		for range time.Tick(s.keepAlive) {
+			if s.running {
+				s.Logger.Debugf("Send keep alive package...")
+				s.Write(towshare.MakeKeepAlivePackage())
+			} else {
+				break
+			}
+		}
+	}()
+
 	// read data
-	// TODO: thread save
 	go (func() {
 		for {
 
@@ -106,6 +122,9 @@ func (s *Session) handlePackage(p *towshare.Package) error {
 				break
 			}
 		}
+	case towshare.PackageTypeAlive:
+		// do nothing
+		break
 	}
 	return nil
 }

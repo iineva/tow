@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	PackageTypeOpen  = 0x01
-	PackageTypeData  = 0x02
-	PackageTypeClose = 0x03
-	PackageTypeError = 0x04
+	PackageTypeOpen  = 0x01 // open socket
+	PackageTypeData  = 0x02 // socket get data
+	PackageTypeClose = 0x03 // close socket
+	PackageTypeError = 0x04 // error
+	PackageTypeAlive = 0x05 // keep alive
 )
 
 type Package struct {
@@ -55,6 +56,10 @@ func NewPackage(b []byte) *Package {
 	p.parsePayload()
 
 	return p
+}
+
+func MakeKeepAlivePackage() []byte {
+	return []byte{PackageTypeAlive, 0x00}
 }
 
 func MakePayloadPackageWithId(t uint8, id uint16, b []byte) []byte {
