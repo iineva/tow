@@ -41,7 +41,7 @@ func NewSession(id uint32, log *chshare.Logger, conn net.Conn) *Session {
 		webSocketConn: conn,
 		running:       false,
 		Conns:         map[uint16]*Conn{},
-		keepAlive:     3 * time.Second,
+		keepAlive:     1 * time.Second,
 	}
 	session.Logger.Info = true
 	session.Logger.Debug = false
