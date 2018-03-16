@@ -81,7 +81,7 @@ var upgrader = websocket.Upgrader{
 func (s *Server) handleWS(w http.ResponseWriter, req *http.Request, sessionID uint16) {
 
 	id := sessionID
-	if sessionID == 0 {
+	if sessionID == 0 || sessionID > s.sessCount {
 		id = uint16(atomic.AddUint32(&s.sessCount, 1))
 	}
 
