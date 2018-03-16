@@ -18,6 +18,7 @@ type Session struct {
 	webSocketReadMutex  sync.Mutex
 	webSocketWriteMutex sync.Mutex
 	running             bool
+	closed              bool
 	Conns               map[uint16]*Conn
 	keepAlive           time.Duration
 }
@@ -35,22 +36,17 @@ func NewSessionError(s string) *SessionError {
 }
 
 func NewSession(id uint16, log *chshare.Logger, conn net.Conn) *Session {
-	session := &Session{
+	s := &Session{
 		Id:            id,
 		Logger:        log,
 		webSocketConn: conn,
 		running:       false,
+		closed:        false,
 		Conns:         map[uint16]*Conn{},
 		keepAlive:     1 * time.Second,
 	}
-	session.Logger.Info = true
-	session.Logger.Debug = true
-	return session
-}
-
-func (s *Session) Start() {
-
-	s.running = true
+	s.Logger.Info = true
+	s.Logger.Debug = true
 
 	// keep alive
 	go func() {
@@ -58,11 +54,18 @@ func (s *Session) Start() {
 			if s.running {
 				s.Logger.Debugf("Send keep alive package...")
 				s.Write(towshare.MakeKeepAlivePackage())
-			} else {
+			} else if s.closed {
 				break
 			}
 		}
 	}()
+
+	return s
+}
+
+func (s *Session) Start() {
+
+	s.running = true
 
 	// read data
 	go (func() {
@@ -77,6 +80,10 @@ func (s *Session) Start() {
 
 			if err != nil {
 				s.Logger.Debugf("Read stream error: %s", err)
+
+				s.running = false
+				s.webSocketConn.Close()
+				break
 			}
 
 			buf = buf[:l]
@@ -145,6 +152,7 @@ func (s *Session) SetWebSocketConn(conn net.Conn) error {
 
 func (s *Session) Close() error {
 	s.running = false
+	s.closed = true
 	err := s.webSocketConn.Close()
 	if err != nil {
 		return err
