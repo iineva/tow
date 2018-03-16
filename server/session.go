@@ -44,7 +44,7 @@ func NewSession(id uint16, log *chshare.Logger, conn net.Conn) *Session {
 		keepAlive:     1 * time.Second,
 	}
 	session.Logger.Info = true
-	session.Logger.Debug = false
+	session.Logger.Debug = true
 	return session
 }
 
@@ -77,7 +77,6 @@ func (s *Session) Start() {
 
 			if err != nil {
 				s.Logger.Debugf("Read stream error: %s", err)
-				s.Close()
 			}
 
 			buf = buf[:l]
@@ -139,10 +138,6 @@ func (s *Session) SetWebSocketConn(conn net.Conn) error {
 
 	err := s.webSocketConn.Close()
 	s.webSocketConn = conn
-
-	if s.running {
-		s.Close()
-	}
 	s.Start()
 
 	return err
