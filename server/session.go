@@ -12,7 +12,7 @@ import (
 
 type Session struct {
 	io.ReadWriteCloser
-	Id                  uint32
+	Id                  uint16
 	Logger              *chshare.Logger
 	webSocketConn       net.Conn // websocket connect
 	webSocketReadMutex  sync.Mutex
@@ -34,7 +34,7 @@ func NewSessionError(s string) *SessionError {
 	return &SessionError{s: s}
 }
 
-func NewSession(id uint32, log *chshare.Logger, conn net.Conn) *Session {
+func NewSession(id uint16, log *chshare.Logger, conn net.Conn) *Session {
 	session := &Session{
 		Id:            id,
 		Logger:        log,
@@ -127,6 +127,25 @@ func (s *Session) handlePackage(p *towshare.Package) error {
 		break
 	}
 	return nil
+}
+
+// reconnect session
+func (s *Session) SetWebSocketConn(conn net.Conn) error {
+
+	s.webSocketReadMutex.Lock()
+	s.webSocketWriteMutex.Lock()
+	defer s.webSocketReadMutex.Unlock()
+	defer s.webSocketWriteMutex.Unlock()
+
+	err := s.webSocketConn.Close()
+	s.webSocketConn = conn
+
+	if s.running {
+		s.Close()
+	}
+	s.Start()
+
+	return err
 }
 
 func (s *Session) Close() error {

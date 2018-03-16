@@ -12,6 +12,7 @@ const (
 	PackageTypeClose = 0x03 // close socket
 	PackageTypeError = 0x04 // error
 	PackageTypeAlive = 0x05 // keep alive
+	PackageTypeGetId = 0x06 // get session id
 )
 
 type Package struct {
@@ -96,6 +97,9 @@ func MakeErrorPackage(id uint16, s string) []byte {
 }
 func MakeClosePackage(id uint16) []byte {
 	return MakePayloadPackageWithId(PackageTypeClose, id, nil)
+}
+func MakeGetIdPackage(id uint16) []byte {
+	return MakePayloadPackageWithId(PackageTypeGetId, id, nil)
 }
 func MakeDataPackage(id uint16, b []byte) []byte {
 	return MakePayloadPackageWithId(PackageTypeData, id, b)

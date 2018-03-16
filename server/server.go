@@ -2,6 +2,7 @@ package towserver
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -14,12 +15,14 @@ type Server struct {
 	*chshare.Logger
 	httpServer *chshare.HTTPServer
 	sessCount  uint32
+	sessMap    map[uint16]*Session
 }
 
 func NewServer() (*Server, error) {
 	s := &Server{
 		Logger:     chshare.NewLogger("server"),
 		httpServer: chshare.NewHTTPServer(),
+		sessMap:    make(map[uint16]*Session),
 	}
 	s.Info = true
 	s.Debug = true
@@ -54,9 +57,13 @@ func (s *Server) Close() error {
 func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	upgrade := strings.ToLower(r.Header.Get("Upgrade"))
 	protocol := r.Header.Get("Sec-WebSocket-Protocol")
+	sessionID, err := strconv.Atoi(r.Header.Get("Tow-Session-Id"))
+	if err != nil {
+		sessionID = 0
+	}
 	//websockets upgrade AND has chisel prefix
 	if upgrade == "websocket" && protocol == towshare.ProtocolVersion {
-		s.handleWS(w, r)
+		s.handleWS(w, r, uint16(sessionID))
 		return
 	}
 
@@ -71,9 +78,12 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (s *Server) handleWS(w http.ResponseWriter, req *http.Request) {
+func (s *Server) handleWS(w http.ResponseWriter, req *http.Request, sessionID uint16) {
 
-	id := atomic.AddUint32(&s.sessCount, 1)
+	id := sessionID
+	if sessionID == 0 {
+		id = uint16(atomic.AddUint32(&s.sessCount, 1))
+	}
 
 	s.Infof("Websocket client did connected: %d", id)
 
@@ -83,8 +93,15 @@ func (s *Server) handleWS(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session := NewSession(id, s.Fork("session#%d", id), towshare.NewWebSocketConn(wsConn))
+	if session, ok := s.sessMap[id]; ok {
+		// reset wsConn
+		session.SetWebSocketConn(towshare.NewWebSocketConn(wsConn))
+	} else {
+		// open new session
+		session := NewSession(id, s.Fork("session#%d", id), towshare.NewWebSocketConn(wsConn))
+		session.Write(towshare.MakeGetIdPackage(id))
+		session.Start()
+		s.sessMap[id] = session
+	}
 
-	// open connect
-	session.Start()
 }
