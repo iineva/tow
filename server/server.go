@@ -25,7 +25,7 @@ func NewServer() (*Server, error) {
 		sessMap:    make(map[uint16]*Session),
 	}
 	s.Info = true
-	s.Debug = true
+	s.Debug = false
 	return s, nil
 }
 
