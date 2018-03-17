@@ -46,7 +46,7 @@ func NewSession(id uint16, log *chshare.Logger, conn net.Conn) *Session {
 		keepAlive:     1 * time.Second,
 	}
 	s.Logger.Info = true
-	s.Logger.Debug = true
+	s.Logger.Debug = false
 
 	// keep alive
 	go func() {
